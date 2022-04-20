@@ -1,0 +1,153 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Viridis Palette Generator</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/normalize/6.0.0/normalize.min.css" />
+    <style>
+        body {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        p {
+            font-height: 1rem;
+            line-height: 1.3rem;
+        }
+        input {
+            width: 50px;
+        }
+        #preview {
+            width: 270px;
+            height: 10px;
+            margin-top: 10px;
+        }
+        #levels {
+            margin-top: 20px;
+        }
+        div.level {
+            width: 100%; 
+            height: 75px;
+            display: block;
+            margin-bottom: 1rem;
+        }
+        div.level div {
+            display: inline-block;
+        }
+        div.block {
+            height: 100%;
+            width: 75px;
+        }
+    </style>
+</head>
+<body style="font-family: sans-serif;">
+
+<h1>Viridis Color Palette Generator</h1>
+<p>
+    The <a href="http://bids.github.io/colormap/">matplotlib colormaps</a> introduced in 2015 are widely popular, with implementations of the palettes in <a href="https://cran.r-project.org/web/packages/viridis/vignettes/intro-to-viridis.html">R</a>, <a href="https://github.com/d3/d3-scale#interpolateViridis">D3js</a>, and others. Popular for good reason, the palettes are colorblind-friendly, retain representational clarity in greyscale, and are generally aesthetically pleasing.
+</p>
+<p>
+    This tool provides a convenience wrapper around D3js's viridis implementation for use in data visualization tools with manual color value specification (e.g., Microsoft Excel, ArcGIS, and Tableau to name a few). To begin, select the number of categories and the color palette you'd like to use. 
+</p>
+
+<label for="groups">Categories: </label>
+<input type="number" id="groups" value="5" min="2" max="256">
+<label for="palette">Palette: </label>
+<select name="palette" id="palette">
+    <option value="v">viridis</option>
+    <option value="i">inferno</option>
+    <option value="m">magma</option>
+    <option value="p">plasma</option>
+</select>
+<!-- <button id="generate">Generate</button> -->
+<div id="preview"></div>
+
+<div id="levels"></div>
+
+<script src="https://d3js.org/d3.v4.min.js"></script>
+<script>
+    d3.select('input').on('change', function() {
+        generatePalette();
+    });
+    d3.select('input').on('keyup', function() {
+        generatePalette();
+    });
+    d3.select('select').on('change', function() {
+        generatePalette();
+    });
+    function generatePalette() {
+        var n = parseInt(d3.select("#groups").property("value"));
+        if (n > 256) {
+            n = 256;
+            d3.select("#groups").property("value", 256);
+        }
+        var p = d3.select("#palette").property("value");
+
+        // Interpolation Scale Proxy
+        var paletteProxy = function(_l) {
+            switch (p) {
+                case "v":
+                    return d3.interpolateViridis(_l);
+                case "i":
+                    return d3.interpolateInferno(_l);
+                case "m":
+                    return d3.interpolateMagma(_l);
+                case "p":
+                    return d3.interpolatePlasma(_l);
+                default:
+                    break;
+            }
+        };
+
+        // Update the preview
+        var gradient = "linear-gradient(to right, " +
+                       paletteProxy(1.0) + ", " +
+                       paletteProxy(0.5) + ", " +
+                       paletteProxy(0.0) + "" +
+                       ")";
+        d3.select("#preview").style("background", gradient);
+        d3.select("#preview").style("background", gradient);
+
+        // Update the value-levels
+        var data = [];
+        d3.range(0, 1 + 1/(n - 1), 1/(n - 1))
+            .slice(0, n)
+            .reverse()
+            .map(function(l) {
+                var r, g, b, hex;
+                hex = paletteProxy(l);
+                r = parseInt(hex.slice(1, 3), 16);
+                g = parseInt(hex.slice(3, 5), 16);
+                b = parseInt(hex.slice(5, 7), 16);
+                var obj = {
+                    "background": hex,
+                    "rgb": [r, g, b]
+                };
+                data.push(obj);
+            });
+        d3.select("#levels")
+            .html("")
+            .selectAll("div")
+            .data(data).enter()
+            .append("div")
+            .classed("level", true)
+                .append("div")
+                .classed("block", true)
+                .style("background-color", function(d) {return d.background;})
+                .select(function() {return this.parentNode})
+                .append("div")
+                    .html(function(d){
+                        var rgb = "rgb(" + d.rgb.join(", ") + ")";
+                        var hex = d.background;
+                        return rgb + "<br><br>" + hex}
+                    )
+                    .style("position", "absolute")
+                    .style("padding-top", "1rem")
+                    .style("padding-left", "1rem");
+
+    }
+</script>
+<script type="text/javascript">
+        generatePalette();
+</script>
+</body>
+</html>
